@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>3D Demo Game</title>
+<style>
+body { margin: 0; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
+import { PointerLockControls } from 'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/controls/PointerLockControls.js';
+import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xbfd1e5);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const world = new CANNON.World({ gravity: new CANNON.Vec3(0, 0, -9.82) });
+
+const floorGeo = new THREE.PlaneGeometry(50, 50);
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+floorMesh.rotation.x = -Math.PI / 2;
+scene.add(floorMesh);
+const floorShape = new CANNON.Plane();
+const floorBody = new CANNON.Body({ mass: 0, shape: floorShape });
+floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+world.addBody(floorBody);
+
+const cubes = [];
+const cubeBodies = [];
+const colors = Array.from({ length: 25 }, (_, i) => new THREE.Color(`hsl(${i * 14}, 80%, 60%)`));
+for (let i = 0; i < 25; i++) {
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  const boxMat = new THREE.MeshStandardMaterial({ color: colors[i] });
+  const mesh = new THREE.Mesh(boxGeo, boxMat);
+  mesh.position.set((i % 5) * 2 - 4, Math.floor(i / 5) * 2 - 4, 5 + Math.random() * 2);
+  scene.add(mesh);
+  cubes.push(mesh);
+
+  const shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+  const body = new CANNON.Body({ mass: 1 });
+  body.addShape(shape);
+  body.position.copy(mesh.position);
+  world.addBody(body);
+  cubeBodies.push(body);
+}
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+scene.add(ambient);
+const light = new THREE.DirectionalLight(0xffffff, 0.8);
+light.position.set(5, 5, 10);
+scene.add(light);
+
+const controls = new PointerLockControls(camera, renderer.domElement);
+document.addEventListener('click', () => controls.lock());
+camera.position.set(0, 0, 2);
+
+const velocity = new THREE.Vector3();
+const direction = new THREE.Vector3();
+
+function onKeyDown(event) {
+  switch (event.code) {
+    case 'ArrowUp':
+    case 'KeyW':
+      velocity.z = -5;
+      break;
+    case 'ArrowLeft':
+    case 'KeyA':
+      velocity.x = -5;
+      break;
+    case 'ArrowDown':
+    case 'KeyS':
+      velocity.z = 5;
+      break;
+    case 'ArrowRight':
+    case 'KeyD':
+      velocity.x = 5;
+      break;
+  }
+}
+function onKeyUp(event) {
+  switch (event.code) {
+    case 'ArrowUp':
+    case 'KeyW':
+    case 'ArrowDown':
+    case 'KeyS':
+      velocity.z = 0;
+      break;
+    case 'ArrowLeft':
+    case 'KeyA':
+    case 'ArrowRight':
+    case 'KeyD':
+      velocity.x = 0;
+      break;
+  }
+}
+document.addEventListener('keydown', onKeyDown);
+document.addEventListener('keyup', onKeyUp);
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  if (controls.isLocked) {
+    direction.z = velocity.z * delta;
+    direction.x = velocity.x * delta;
+    controls.moveRight(direction.x);
+    controls.moveForward(-direction.z);
+  }
+  world.step(1 / 60, delta);
+  for (let i = 0; i < cubes.length; i++) {
+    cubes[i].position.copy(cubeBodies[i].position);
+    cubes[i].quaternion.copy(cubeBodies[i].quaternion);
+  }
+  renderer.render(scene, camera);
+}
+
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
