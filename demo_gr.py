@@ -76,7 +76,7 @@ class FluxGenerator:
             init_image = torch.nn.functional.interpolate(init_image, (opts.height, opts.width))
             if self.offload:
                 self.ae.encoder.to(self.device)
-            init_image = self.ae.encode(init_image.to())
+            init_image = self.ae.encode(init_image.to(self.device))
             if self.offload:
                 self.ae = self.ae.cpu()
                 torch.cuda.empty_cache()

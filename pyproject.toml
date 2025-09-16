@@ -31,9 +31,14 @@ streamlit = [
 gradio = [
   "gradio",
 ]
+dev = [
+  "pytest",
+  "pytest-mock",
+]
 all = [
   "flux[streamlit]",
   "flux[gradio]",
+  "flux[dev]",
 ]
 
 [project.scripts]
